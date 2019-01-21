@@ -1,0 +1,66 @@
+####
+# ATENTION:
+# Replace all occurences of primepass with your project's name
+####
+
+# v2 syntax
+version: '2'
+
+# Named volumes
+volumes:
+  # MySQL Data
+  primepass-mysql-data:
+    driver: local
+
+  # Redis Data
+  primepass-redis-data:
+    driver: local
+
+services:
+  # MySQL (5.7)
+  mysql:
+    image: mysql:5.7
+    container_name: primepass-mysql
+    volumes:
+      - primepass-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=primepass
+      - MYSQL_DATABASE=primepass
+      - MYSQL_USER=primepass
+      - MYSQL_PASSWORD=primepass
+
+  # Redis
+  cache:
+    image: redis:4.0
+    container_name: primepass-redis
+    command: --appendonly yes
+    volumes:
+      - primepass-redis-data:/data
+    ports:
+      - "6379:6379"
+
+  # PHP (with Nginx)
+  # you can change from nginx to apache, just change session 'image'
+  app:
+    image: ambientum/php:7.2-nginx
+    container_name: primepass-app
+    volumes:
+      - .:/var/www/app
+    ports:
+      - "80:8080"
+    links:
+      - mysql
+      - cache
+
+  # Laravel Queues
+  queue:
+    image: ambientum/php:7.2
+    container_name: primepass-queue
+    command: php artisan queue:listen
+    volumes:
+      - .:/var/www/app
+    links:
+      - mysql
+      - cache
